@@ -9,7 +9,7 @@ A página não traz dados de ninguém e não guarda nada. Ela trabalha só com a
 | Arquivo | O que é |
 |---|---|
 | `sorteio-rifa-ibvb.html` | A aplicação inteira em um único arquivo: página, estilo, código e imagens. |
-| `expor_na_rede.py` | Servidor opcional para abrir a página em outros aparelhos da mesma rede. |
+| `expor_na_rede.py` | Servidor opcional: abre a página em outros aparelhos da mesma rede e compartilha com eles os dados carregados. |
 | `.gitignore` | Mantém planilhas `.xlsx` fora do repositório. |
 
 ## Como usar
@@ -51,8 +51,9 @@ O quadro de pontos tem 10 colunas. Rifas de até 200 pontos cabem inteiras na te
 
 ## Nada fica guardado
 
-- A planilha, a quantidade de pontos e a lista de sorteios ficam só na memória da página. Ela não usa `localStorage` nem cookies, e os dados não saem do navegador.
-- Fechar ou recarregar a página apaga tudo, e é preciso carregar a planilha de novo.
+- A página não usa `localStorage` nem cookies. A planilha, a quantidade de pontos e a lista de sorteios ficam só na memória dela.
+- Aberta direto do arquivo, os dados não saem do navegador. Fechar ou recarregar a página apaga tudo, e é preciso carregar a planilha de novo.
+- Servida pelo `expor_na_rede.py`, os dados carregados ficam também na memória do script, enquanto ele estiver aberto. Nada é gravado em disco. Recarregar a página traz os dados de volta, mas a lista de sorteios se perde.
 - Se já houver sorteios feitos, o navegador pede confirmação antes de fechar ou recarregar.
 
 ## Abrir em outros aparelhos da rede
@@ -71,8 +72,19 @@ python expor_na_rede.py 8080
 
 Deixe a janela aberta enquanto a página estiver em uso. `Ctrl+C` encerra.
 
-- **O script entrega só a página, sem dados.** Cada aparelho precisa carregar a planilha e faz o próprio sorteio. Os resultados não são compartilhados entre aparelhos.
-- Nenhum outro arquivo da pasta fica acessível pela rede.
+Com o script, os dados carregados na página valem para a rede toda:
+
+- **Quem carrega primeiro compartilha.** Ao clicar em **IR PARA O SORTEIO**, os nomes, os pontos e a quantidade de pontos vão para a memória do script.
+- **Os outros aparelhos abrem direto no sorteio**, sem precisar da planilha. Quem já estava com a página aberta precisa recarregar.
+- **Só o aparelho que carregou, ou o computador que roda o script, pode trocar a planilha ou a quantidade.** Nos outros, a tela de dados fica só para consulta.
+- **Cada aparelho faz o próprio sorteio.** Os resultados e a lista de pontos sorteados não são compartilhados. O sorteio oficial é o da tela de quem apresenta.
+- **Nada é gravado em disco.** Encerrar o script apaga os dados. Para começar com outra rifa, basta reiniciá-lo.
+- Se o envio dos dados falhar, a página avisa e oferece seguir só naquele aparelho.
+
+Sobre o acesso pela rede:
+
+- **Quem abrir o endereço vê os nomes dos participantes e os pontos de cada um.** Telefones e e-mails não saem da planilha.
+- O script entrega só a página e esses dados. Nenhum arquivo da pasta fica acessível.
 - No Windows, o firewall pode perguntar se permite o Python na rede. Sem permitir em redes privadas, os outros aparelhos não conseguem abrir a página.
 
 ## Dados e privacidade

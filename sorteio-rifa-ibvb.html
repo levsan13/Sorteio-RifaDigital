@@ -137,6 +137,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .chip { border: 1.5px solid rgba(255, 241, 214, .4); border-radius: 999px; background: transparent; padding: .35em .9em; font-weight: 700; font-size: 14px; color: var(--cream); font-variant-numeric: tabular-nums; transition: background-color .15s; }
 .chip:hover { background: rgba(255, 241, 214, .1); }
 .chip[aria-pressed="true"] { background: var(--cream); border-color: var(--cream); color: var(--navy); }
+.chip:disabled, .qtd input:disabled { opacity: .6; cursor: not-allowed; }
 .setup-go { display: grid; gap: 12px; justify-items: start; }
 
 /* ---------- Tela 2: sorteio ---------- */
@@ -357,7 +358,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
     <div class="setup-go">
       <p class="aviso" id="avisoSessao" hidden></p>
       <button class="btn-draw" id="btnComecar" type="button" disabled>IR PARA O SORTEIO</button>
-      <p class="muted">A planilha é lida aqui no navegador e nada fica guardado: ao fechar ou recarregar a página, os dados e os sorteios somem.</p>
+      <p class="muted" id="notaDados"></p>
     </div>
   </section>
 
@@ -420,7 +421,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
         <button class="btn solid" id="btnTrocar" type="button">Trocar planilha ou quantidade</button>
       </div>
       <p class="muted">Como o sorteio funciona: o ponto é escolhido pelo gerador aleatório criptográfico do navegador no instante do clique, com a mesma chance para cada ponto que concorre. A contagem na tela só revela o resultado. Ponto que já saiu não volta a concorrer até você recomeçar o sorteio.</p>
-      <p class="muted">Nada fica guardado. Ao fechar ou recarregar a página, a planilha e os sorteios somem.</p>
+      <p class="muted" id="notaSorteio"></p>
     </section>
   </div>
 </div>
@@ -460,7 +461,7 @@ const IMAGENS = {
     palco: $('palco'), telaDados: $('telaDados'), colSorteio: $('colSorteio'), colQuadro: $('colQuadro'), ferramentas: $('ferramentas'), detalhes: $('participantes'),
     soltar: $('soltar'), soltarVazio: $('soltarVazio'), soltarOk: $('soltarOk'), arquivo: $('arquivo'), btnArquivo: $('btnArquivo'), btnOutroArquivo: $('btnOutroArquivo'),
     arquivoNome: $('arquivoNome'), arquivoResumo: $('arquivoResumo'), avisoDados: $('avisoDados'),
-    qtd: $('qtdPontos'), atalhos: [...document.querySelectorAll('#atalhosQtd .chip')], faixa: $('faixa'), avisoSessao: $('avisoSessao'), btnComecar: $('btnComecar'),
+    qtd: $('qtdPontos'), atalhos: [...document.querySelectorAll('#atalhosQtd .chip')], faixa: $('faixa'), avisoSessao: $('avisoSessao'), btnComecar: $('btnComecar'), notaDados: $('notaDados'), notaSorteio: $('notaSorteio'),
     anel: $('anel'), numero: $('numero'), status: $('status'), btn: $('btnSortear'),
     modoVendidos: $('modoVendidos'), modoTodos: $('modoTodos'), rotuloTodos: $('rotuloTodos'),
     restam: $('restam'), recomecoPalco: $('recomecoPalco'), btnRecomecarPalco: $('btnRecomecarPalco'),
@@ -485,8 +486,18 @@ const IMAGENS = {
     modo: 'vendidos',
     som: true,
     historico: [],
-    sorteando: false
+    sorteando: false,
+    enviando: false   // mandando os dados para a rede
   };
+  // Servida pelo expor_na_rede.py, a página deixa os dados carregados na memória do servidor,
+  // e os outros aparelhos da rede abrem direto no sorteio. Aberta como arquivo, funciona só neste aparelho.
+  const rede = {
+    ativa: false,      // o servidor que entregou a página guarda dados
+    podeTrocar: true,  // este aparelho pode carregar ou trocar os dados da rede
+    noServidor: null,  // { linhas, total } que o servidor tem, até onde esta página sabe
+    aviso: '', falhou: false
+  };
+  const naRede = (n) => !!rede.noServidor && rede.noServidor.linhas === estado.linhas && rede.noServidor.total === n;
   let sessao = null;          // { linhas, total } do sorteio em andamento
   let total = 0;              // pontos da rifa neste sorteio: de 0 a total - 1
   let pessoas = [];           // contribuições que valem neste sorteio: [{ nome, pontos }]
@@ -519,12 +530,15 @@ const IMAGENS = {
   const mesmaSessao = (n) => !!sessao && sessao.linhas === estado.linhas && sessao.total === n;
   function pintarDados() {
     const n = quantidade(), tem = !!estado.linhas;
+    const travado = rede.ativa && !rede.podeTrocar; // os dados desta rede vieram de outro aparelho
     el.faixa.textContent = n ? `Os pontos vão de 0 a ${n - 1}.` : `Informe um número inteiro de ${QTD_MIN} a ${QTD_MAX}.`;
-    el.atalhos.forEach((c) => c.setAttribute('aria-pressed', String(Number(c.dataset.qtd) === n)));
+    el.qtd.disabled = travado;
+    el.atalhos.forEach((c) => { c.setAttribute('aria-pressed', String(Number(c.dataset.qtd) === n)); c.disabled = travado; });
     el.soltar.classList.toggle('ok', tem);
     el.soltarVazio.hidden = tem; el.soltarOk.hidden = !tem;
+    el.btnOutroArquivo.hidden = travado;
 
-    let pode = false, aviso = estado.erroArquivo, erro = !!estado.erroArquivo;
+    let pode = false, aviso = estado.erroArquivo || rede.aviso, erro = !!estado.erroArquivo || rede.falhou;
     if (tem) {
       el.arquivoNome.textContent = estado.arquivo;
       if (n) {
@@ -545,11 +559,19 @@ const IMAGENS = {
     el.avisoDados.textContent = aviso; el.avisoDados.classList.toggle('erro', erro); el.avisoDados.hidden = !aviso;
 
     const mesma = mesmaSessao(n);
-    el.btnComecar.disabled = !pode;
-    el.btnComecar.textContent = mesma ? 'VOLTAR AO SORTEIO' : 'IR PARA O SORTEIO';
+    el.btnComecar.disabled = !pode || estado.enviando;
+    el.btnComecar.textContent = estado.enviando ? 'COMPARTILHANDO…' : mesma ? 'VOLTAR AO SORTEIO' : 'IR PARA O SORTEIO';
     const perde = !!sessao && estado.historico.length > 0 && !mesma;
     el.avisoSessao.hidden = !perde;
     if (perde) el.avisoSessao.textContent = `Com outra planilha ou outra quantidade o sorteio recomeça do zero: ${plural(estado.historico.length, 'ponto já sorteado volta', 'pontos já sorteados voltam')} à disputa.`;
+
+    el.notaDados.textContent = travado
+      ? 'Estes dados foram carregados por outro aparelho desta rede. Para trocar, use o aparelho que carregou ou o computador que roda o script.'
+      : !rede.ativa
+        ? 'A planilha é lida aqui no navegador e nada fica guardado: ao fechar ou recarregar a página, os dados e os sorteios somem.'
+        : tem && naRede(n)
+          ? 'Estes dados já estão disponíveis para os outros aparelhos desta rede.'
+          : 'Ao ir para o sorteio, estes dados ficam disponíveis para os outros aparelhos desta rede enquanto o script estiver aberto. Nada é gravado em disco.';
   }
   function mostrarTela(qual) {
     const sorteio = qual === 'sorteio';
@@ -559,12 +581,52 @@ const IMAGENS = {
     if (!sorteio) pintarDados();
     window.scrollTo(0, 0);
   }
-  function comecar() {
+  // Aceita os dados que vieram do servidor, se tiverem o formato esperado.
+  function adotar(dados) {
+    const ok = !!dados && typeof dados.arquivo === 'string'
+      && Number.isInteger(dados.total) && dados.total >= QTD_MIN && dados.total <= QTD_MAX
+      && Array.isArray(dados.linhas) && dados.linhas.length > 0
+      && dados.linhas.every((l) => l && typeof l.nome === 'string' && Array.isArray(l.numeros) && l.numeros.every((x) => Number.isInteger(x) && x >= 0));
+    if (!ok) return false;
+    estado.linhas = dados.linhas; estado.arquivo = dados.arquivo; estado.erroArquivo = '';
+    el.qtd.value = dados.total;
+    rede.noServidor = { linhas: estado.linhas, total: dados.total };
+    return true;
+  }
+  // Manda os dados carregados para o servidor. Devolve true se eles passaram a valer para a rede.
+  async function compartilhar(n) {
+    estado.enviando = true; pintarDados();
+    try {
+      const r = await fetch('dados', {
+        method: 'PUT', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ arquivo: estado.arquivo, total: n, linhas: estado.linhas })
+      });
+      if (r.status === 409) { // outro aparelho carregou antes: valem os dados dele
+        const corpo = await r.json();
+        if (!adotar(corpo.dados)) throw new Error('resposta');
+        rede.podeTrocar = false; rede.falhou = false;
+        rede.aviso = 'Outro aparelho carregou os dados desta rede primeiro. O sorteio usa os dados dele.';
+        return false;
+      }
+      if (!r.ok) throw new Error('recusado');
+      rede.noServidor = { linhas: estado.linhas, total: n }; rede.podeTrocar = true;
+      return true;
+    } catch {
+      rede.ativa = false; rede.falhou = true; // o próximo clique segue sem a rede
+      rede.aviso = 'Não consegui compartilhar os dados na rede. Clique de novo para seguir só neste aparelho.';
+      return false;
+    } finally {
+      estado.enviando = false;
+    }
+  }
+  async function comecar() {
     const n = quantidade();
-    if (!n || !estado.linhas) return;
+    if (!n || !estado.linhas || estado.enviando) return;
     if (!mesmaSessao(n)) {
       const c = conferir(estado.linhas, n);
       if (c.fora.length || !c.pessoas.length) return;
+      if (rede.ativa && !naRede(n) && !(await compartilhar(n))) { pintarDados(); return; }
+      rede.aviso = ''; rede.falhou = false;
       sessao = { linhas: estado.linhas, total: n };
       total = n; pessoas = c.pessoas;
       estado.historico = []; sorteados.clear();
@@ -575,6 +637,22 @@ const IMAGENS = {
       montarQuadro(); pintar(); pintarHistorico();
     }
     mostrarTela('sorteio');
+  }
+  // Ao abrir: se a página veio do servidor e ele já tem dados, vai direto para o sorteio.
+  async function buscarNaRede() {
+    if (!/^https?:$/.test(location.protocol)) return;
+    const controle = new AbortController(), prazo = setTimeout(() => controle.abort(), 3000);
+    try {
+      const r = await fetch('dados', { cache: 'no-store', signal: controle.signal });
+      if (!r.ok || !(r.headers.get('content-type') || '').includes('application/json')) return;
+      const corpo = await r.json();
+      rede.ativa = true; rede.podeTrocar = corpo.podeTrocar !== false;
+      if (corpo.dados && adotar(corpo.dados)) await comecar();
+    } catch {
+      /* sem servidor de dados: a página funciona só neste aparelho */
+    } finally {
+      clearTimeout(prazo);
+    }
   }
   function voltarAosDados() {
     if (!estado.sorteando) mostrarTela('dados');
@@ -649,7 +727,11 @@ const IMAGENS = {
       li.append(topo, chips); el.pessoas.append(li);
     }
     el.resumoPessoas.textContent = `${plural(pessoas.length, 'contribuição', 'contribuições')} · ${plural(vendidos.length, 'ponto vendido', 'pontos vendidos')} de ${total}`;
-    el.fonte.textContent = `Em uso: ${estado.arquivo}, em uma rifa de ${total} pontos (0 a ${total - 1}).`;
+    el.fonte.textContent = `Em uso: ${estado.arquivo}, em uma rifa de ${total} pontos (0 a ${total - 1}).`
+      + (rede.ativa && naRede(total) ? ' Estes dados estão disponíveis para os outros aparelhos desta rede.' : '');
+    el.notaSorteio.textContent = rede.ativa
+      ? 'Os dados ficam na memória do script que serve a página, só enquanto ele estiver aberto. Os sorteios ficam só neste aparelho e somem ao fechar ou recarregar a página.'
+      : 'Nada fica guardado. Ao fechar ou recarregar a página, a planilha e os sorteios somem.';
   }
   function pintarHistorico() {
     el.historico.textContent = '';
@@ -1010,10 +1092,12 @@ const IMAGENS = {
     return saida;
   }
   async function carregarPlanilha(arquivo) {
+    if (rede.ativa && !rede.podeTrocar) return; // só quem carregou os dados da rede pode trocá-los
     try {
       estado.linhas = extrair(await lerXlsx(arquivo));
       estado.arquivo = arquivo.name;
       estado.erroArquivo = '';
+      rede.aviso = ''; rede.falhou = false;
     } catch (e) {
       const motivo = e && e.message;
       estado.erroArquivo = (motivo === 'colunas' ? `Não encontrei as colunas Nome e Cotas em ${arquivo.name}. Use o relatório .xlsx exportado pela rifa.digital.`
@@ -1116,6 +1200,11 @@ const IMAGENS = {
   /* ---------- Início ---------- */
   bandeirinhas();
   mostrarTela('dados');
+  // enquanto consulta a rede, a tela de dados fica fora de vista para não piscar antes do sorteio
+  el.telaDados.hidden = /^https?:$/.test(location.protocol);
+  buscarNaRede().then(() => {
+    if (el.palco.dataset.view === 'dados') { el.telaDados.hidden = false; pintarDados(); }
+  });
 })();
 </script>
 </body>
