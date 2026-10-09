@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Montserrat:wght@500;600;700;800;900&display=swap">
 <style>
-/* Layout: palco de uma tela só, em três zonas como no cartaz (arte da campanha · anel do ponto sorteado · quadro dos 200 pontos); listas e planilha ficam abaixo. */
+/* Layout: duas telas no mesmo palco do cartaz. Tela 1 carrega a planilha e a quantidade de pontos; tela 2 é o sorteio (arte da campanha · anel do ponto sorteado · quadro de pontos), com listas abaixo. */
 :root {
   color-scheme: dark;
   --teal: #17758E;
@@ -30,7 +30,8 @@
   --gutter: clamp(16px, 2.6vw, 48px);
   --dome-r: clamp(118px, 14vw, 240px);
   --ring: clamp(190px, min(24vw, 40vh), 420px);
-  --cell: clamp(19px, calc((100vh - 250px) / 20 - 3px), 40px);
+  --board-h: calc(100vh - 250px);
+  --cell: clamp(19px, calc(var(--board-h) / var(--rows, 20) - 3px), 40px);
 }
 
 * { box-sizing: border-box; }
@@ -58,6 +59,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
     radial-gradient(70% 62% at 56% 54%, #116D87 0%, rgba(17, 109, 135, 0) 72%),
     var(--teal);
 }
+.stage[data-view="dados"] { grid-template-areas: "art setup setup"; }
 .stage::after {
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .09; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
@@ -74,7 +76,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tool svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tool[aria-pressed="false"] .on, .tool[aria-pressed="true"] .off { display: none; }
 
-/* Zona 1: marca + arte do cartaz */
+/* Marca + arte do cartaz (nas duas telas) */
 .col-art { grid-area: art; min-width: 0; display: flex; flex-direction: column; gap: clamp(8px, 1.6vh, 20px); padding-bottom: calc(var(--dome-r) + 6px); }
 .brand { display: flex; flex-direction: column; align-items: flex-start; gap: .12em; font-size: clamp(42px, min(4.8vw, 9.5vh), 100px); }
 .brand-ibvb { font-weight: 900; line-height: .86; letter-spacing: -.015em; color: #F8EACD; }
@@ -98,9 +100,47 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .church { position: absolute; z-index: 1; left: calc(var(--dome-r) * -.3); bottom: 0; width: calc(var(--dome-r) * 2); height: var(--dome-r); border-radius: var(--dome-r) var(--dome-r) 0 0; background: var(--cream-blob); box-shadow: 0 0 50px rgba(255, 224, 190, .28); }
 .church img { position: absolute; left: calc(var(--dome-r) * .47); bottom: calc(var(--dome-r) * .09); width: calc(var(--dome-r) * 1.12); height: auto; max-width: none; }
 
-/* Zona 2: o sorteio */
-.col-draw { grid-area: draw; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(10px, 1.9vh, 22px); text-align: center; }
 .pill-label { display: inline-block; font-weight: 800; letter-spacing: .08em; line-height: 1; color: var(--gold); background: #06293F; padding: .42em .8em .38em; border-radius: .5em; }
+.btn-draw {
+  border: 0; border-radius: 999px; padding: .6em 2.3em .56em; font-weight: 900; font-size: clamp(20px, 3vh, 34px); letter-spacing: .07em; line-height: 1.1;
+  color: var(--rust); background: linear-gradient(#FFC98A, #FDB06A); box-shadow: 0 .26em 0 #C9793A, 0 .7em 1.2em rgba(5, 30, 45, .38);
+  transition: transform .12s, box-shadow .12s, filter .12s;
+}
+.btn-draw:hover { transform: translateY(-2px); filter: brightness(1.04); }
+.btn-draw:active { transform: translateY(.2em); box-shadow: 0 .06em 0 #C9793A, 0 .3em .6em rgba(5, 30, 45, .38); }
+.btn-draw:disabled { transform: none; filter: saturate(.5) brightness(.9); cursor: not-allowed; }
+.btn { border: 1.5px solid rgba(255, 241, 214, .4); border-radius: 999px; background: transparent; padding: .5em 1.2em; font-weight: 700; font-size: 14px; color: var(--cream); transition: background-color .15s; }
+.btn:hover { background: rgba(255, 241, 214, .1); }
+.btn.solid { border-color: var(--cream); background: var(--cream); color: var(--navy); }
+.btn.solid:hover { background: #fff; }
+.link { border: 0; padding: 0; background: none; font-size: inherit; font-weight: 700; color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+.muted { margin: 0; color: rgba(255, 241, 214, .78); font-size: 15px; }
+.aviso { margin: 0; padding: 10px 14px; border-radius: 12px; background: rgba(52, 189, 182, .18); border: 1.5px solid rgba(52, 189, 182, .55); font-size: 15px; font-weight: 600; }
+.aviso.erro { background: rgba(247, 111, 125, .16); border-color: rgba(247, 111, 125, .65); }
+
+/* ---------- Tela 1: dados ---------- */
+.col-setup { grid-area: setup; min-width: 0; align-self: center; justify-self: center; width: 100%; max-width: 660px; display: grid; gap: clamp(14px, 2.4vh, 24px); padding: clamp(18px, 3vh, 32px) clamp(16px, 2.4vw, 34px); border-radius: 28px; background: var(--panel); border: 1.5px solid var(--line); box-shadow: 0 18px 40px rgba(4, 30, 45, .3); }
+.setup-head { display: grid; gap: 10px; justify-items: start; }
+.setup-head .pill-label { font-size: clamp(13px, 1.9vh, 17px); }
+.setup-title { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 4.2vh, 42px); line-height: 1.05; color: #FFF7EC; text-wrap: balance; }
+.campo { display: grid; gap: 10px; min-width: 0; }
+.campo h3 { margin: 0; font-size: clamp(13px, 1.8vh, 16px); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+.drop { display: grid; gap: 10px; justify-items: center; padding: clamp(16px, 2.8vh, 28px) 16px; border: 2px dashed rgba(255, 241, 214, .45); border-radius: 20px; text-align: center; transition: border-color .15s, background-color .15s; }
+.drop.sobre { border-color: var(--yellow); background: rgba(254, 196, 52, .1); }
+.drop.ok { border-style: solid; border-color: rgba(52, 189, 182, .7); background: rgba(52, 189, 182, .12); }
+.drop-part { display: grid; gap: 10px; justify-items: center; min-width: 0; }
+.drop p { margin: 0; max-width: 46ch; }
+.drop-nome { font-weight: 800; overflow-wrap: anywhere; }
+.qtd { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.qtd input { color-scheme: light; width: 5.4em; padding: .1em .3em; border: 0; border-radius: 14px; background: var(--cream); color: var(--navy); font-family: var(--font-display); font-weight: 800; font-size: clamp(24px, 3.6vh, 34px); line-height: 1.25; text-align: center; font-variant-numeric: tabular-nums; }
+.chips-qtd { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1.5px solid rgba(255, 241, 214, .4); border-radius: 999px; background: transparent; padding: .35em .9em; font-weight: 700; font-size: 14px; color: var(--cream); font-variant-numeric: tabular-nums; transition: background-color .15s; }
+.chip:hover { background: rgba(255, 241, 214, .1); }
+.chip[aria-pressed="true"] { background: var(--cream); border-color: var(--cream); color: var(--navy); }
+.setup-go { display: grid; gap: 12px; justify-items: start; }
+
+/* ---------- Tela 2: sorteio ---------- */
+.col-draw { grid-area: draw; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(10px, 1.9vh, 22px); text-align: center; }
 .draw-label { font-size: clamp(15px, 2.2vh, 24px); margin: 0; }
 
 .ring {
@@ -112,7 +152,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .ring-face { width: 89%; height: 89%; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: radial-gradient(circle at 50% 32%, #1E7896 0%, #0F4D67 56%, #0A3248 100%); box-shadow: inset 0 calc(var(--d) * .03) calc(var(--d) * .09) rgba(0, 0, 0, .38); }
 .ring-face img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.03); }
 .digits {
-  display: block; font-family: var(--font-display); font-weight: 800; font-size: calc(var(--d) * .43); line-height: 1; letter-spacing: -.01em; font-variant-numeric: tabular-nums;
+  display: block; font-family: var(--font-display); font-weight: 800; font-size: calc(var(--d) * var(--digit-k, .43)); line-height: 1; letter-spacing: -.01em; font-variant-numeric: tabular-nums;
   color: #FFF7EC; -webkit-text-stroke: calc(var(--d) * .034) var(--navy); paint-order: stroke fill; text-shadow: 0 calc(var(--d) * .02) 0 rgba(6, 26, 40, .6);
   transform: translateY(6%);
 }
@@ -128,15 +168,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .status-wrap { display: grid; gap: 2px; justify-items: center; }
 .status { margin: 0; min-height: 1.45em; font-weight: 700; font-size: clamp(14px, 1.9vh, 19px); overflow-wrap: anywhere; }
 .restam { margin: 0; font-size: clamp(12px, 1.6vh, 15px); font-weight: 600; color: rgba(255, 241, 214, .82); }
-.link { border: 0; padding: 0; background: none; font-size: inherit; font-weight: 700; color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
-.btn-draw {
-  border: 0; border-radius: 999px; padding: .6em 2.3em .56em; font-weight: 900; font-size: clamp(20px, 3vh, 34px); letter-spacing: .07em; line-height: 1.1;
-  color: var(--rust); background: linear-gradient(#FFC98A, #FDB06A); box-shadow: 0 .26em 0 #C9793A, 0 .7em 1.2em rgba(5, 30, 45, .38);
-  transition: transform .12s, box-shadow .12s, filter .12s;
-}
-.btn-draw:hover { transform: translateY(-2px); filter: brightness(1.04); }
-.btn-draw:active { transform: translateY(.2em); box-shadow: 0 .06em 0 #C9793A, 0 .3em .6em rgba(5, 30, 45, .38); }
-.btn-draw:disabled { transform: none; filter: saturate(.55) brightness(.92); cursor: progress; }
 
 .mode { border: 0; margin: 0; padding: 4px; display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 4px; border-radius: 999px; background: rgba(9, 40, 60, .6); font-size: clamp(12px, 1.6vh, 14px); font-weight: 700; }
 .mode label { cursor: pointer; }
@@ -151,7 +182,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .prize-copy { margin: 0; display: grid; justify-items: start; gap: .5em; font-size: clamp(12px, 1.7vh, 17px); }
 .prize-text { font-weight: 600; letter-spacing: .03em; text-transform: uppercase; line-height: 1.25; max-width: 15em; color: #FFEFD0; }
 
-/* Zona 3: quadro dos 200 pontos */
+/* Quadro de pontos */
 .col-board { grid-area: board; min-width: 0; align-self: center; margin-top: 44px; display: grid; gap: 10px; padding: 14px 16px 12px; border-radius: 26px; background: var(--panel); border: 1.5px solid var(--line); box-shadow: 0 18px 40px rgba(4, 30, 45, .3); }
 .board-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 14px; }
 .board-head h2 { margin: 0; font-size: clamp(14px, 1.9vh, 19px); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
@@ -160,8 +191,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .legend i { width: 12px; height: 12px; border-radius: 4px; background: var(--cream); }
 .legend i.free { background: rgba(255, 241, 214, .16); }
 .legend i.out { background: transparent; box-shadow: inset 0 0 0 2px var(--pink); }
-.board { container-type: inline-size; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px; }
-.cell { position: relative; height: var(--cell); display: grid; place-items: center; border-radius: 6px; font-size: clamp(9px, min(calc(var(--cell) * .52), 3.7cqw), 17px); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; background: rgba(255, 241, 214, .07); color: rgba(255, 241, 214, .5); cursor: pointer; user-select: none; transition: transform .1s, background-color .1s; }
+.board { position: relative; container-type: inline-size; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px; }
+/* rifas com mais de 200 pontos: o quadro rola por dentro em vez de encolher até ficar ilegível */
+.board.longo { max-height: var(--board-h); overflow-y: auto; margin: -7px; padding: 7px; scrollbar-width: thin; }
+.cell { position: relative; height: var(--cell); display: grid; place-items: center; border-radius: 6px; font-size: clamp(9px, min(calc(var(--cell) * .52), calc(11.1cqw / var(--digits, 3))), 17px); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; background: rgba(255, 241, 214, .07); color: rgba(255, 241, 214, .5); cursor: pointer; user-select: none; transition: transform .1s, background-color .1s; }
 .cell.sold { background: var(--cream); color: var(--navy); font-weight: 800; }
 .cell.drawn { background: transparent; color: var(--pink); font-weight: 800; text-decoration: line-through; box-shadow: inset 0 0 0 2px var(--pink); }
 .cell.hop { z-index: 2; background: var(--yellow); color: var(--navy); transform: scale(1.3); box-shadow: 0 0 0 2px #fff, 0 0 18px 5px rgba(254, 196, 52, .8); }
@@ -173,8 +206,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tab { position: absolute; z-index: 2; bottom: 0; left: 50%; transform: translateX(-50%); margin: 0; padding: .55em 1.4em .5em; border-radius: 14px 14px 0 0; background: var(--navy-ink); color: #fff; font-weight: 700; font-size: clamp(12px, 1.7vh, 17px); white-space: nowrap; }
 
 @media (max-width: 1179px) {
-  :root { --ring: clamp(190px, min(30vw, 40vh), 360px); --cell: 30px; }
+  :root { --ring: clamp(190px, min(30vw, 40vh), 360px); --cell: 30px; --board-h: 70vh; }
   .stage { grid-template-columns: minmax(0, 1fr) minmax(300px, .9fr); grid-template-areas: "art board" "draw board"; padding-bottom: calc(var(--dome-r) + 34px); }
+  .stage[data-view="dados"] { grid-template-columns: minmax(0, .8fr) minmax(300px, 1.2fr); grid-template-areas: "art setup"; }
   .col-art { padding-bottom: 0; }
   .col-board { align-self: start; margin-top: 52px; }
   .tab { left: auto; right: var(--gutter); transform: none; max-width: calc(100% - var(--dome-r) * 1.75 - var(--gutter) - 12px); white-space: normal; text-align: center; }
@@ -183,6 +217,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @media (max-width: 759px) {
   :root { --ring: min(64vw, 300px); --dome-r: 104px; }
   .stage { grid-template-columns: minmax(0, 1fr); grid-template-areas: "art" "draw" "board"; }
+  .stage[data-view="dados"] { grid-template-columns: minmax(0, 1fr); grid-template-areas: "art" "setup"; }
+  .stage[data-view="dados"] .hero { max-width: 420px; }
   .col-board { margin-top: 6px; }
   .bunting { width: 100vw; right: -4vw; opacity: .75; }
   .tab { font-size: 12px; padding: .6em .9em .55em; }
@@ -195,7 +231,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .block-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 18px; }
 .block h2 { margin: 0; font-size: clamp(20px, 2.2vw, 28px); font-weight: 800; letter-spacing: .01em; text-wrap: balance; color: #FFF6E2; }
 .block p { margin: 0; max-width: 65ch; }
-.muted { color: rgba(255, 241, 214, .78); font-size: 15px; }
 .pessoas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 12px; }
 .pessoa { min-width: 0; display: grid; align-content: start; gap: 8px; padding: 12px 14px; border-radius: 16px; background: var(--panel); }
 .pessoa-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
@@ -209,13 +244,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .historico .quem { min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
 .historico .quem small { display: block; font-weight: 500; font-size: 13px; color: rgba(255, 241, 214, .75); }
 .historico time { font-size: 13px; font-weight: 600; color: rgba(255, 241, 214, .78); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.btn { border: 1.5px solid rgba(255, 241, 214, .4); border-radius: 999px; background: transparent; padding: .5em 1.2em; font-weight: 700; font-size: 14px; color: var(--cream); transition: background-color .15s; }
-.btn:hover { background: rgba(255, 241, 214, .1); }
-.btn.solid { border-color: var(--cream); background: var(--cream); color: var(--navy); }
-.btn.solid:hover { background: #fff; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.aviso { padding: 10px 14px; border-radius: 12px; background: rgba(52, 189, 182, .18); border: 1.5px solid rgba(52, 189, 182, .55); font-size: 15px; font-weight: 600; }
-.aviso.erro { background: rgba(247, 111, 125, .16); border-color: rgba(247, 111, 125, .65); }
 
 /* ---------- Revelação ---------- */
 .reveal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; overflow: hidden; background: radial-gradient(circle at 50% 42%, rgba(12, 58, 82, .95), rgba(5, 24, 38, .985)); animation: surge .35s ease both; }
@@ -242,7 +271,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 </head>
 <body>
 
-<main class="stage" id="palco">
+<main class="stage" id="palco" data-view="dados">
   <h1 class="sr">Sorteio da Grande Rifa Online da IBVB Santa Cecília</h1>
 
   <div class="decor" aria-hidden="true">
@@ -260,7 +289,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
     <i class="corner"></i>
   </div>
 
-  <div class="tools">
+  <div class="tools" id="ferramentas" hidden>
+    <button class="tool" id="btnTrocarTopo" type="button" aria-label="Trocar planilha ou quantidade de pontos" title="Trocar planilha ou quantidade de pontos">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6l-6 6 6 6M4 12h16"/></svg>
+    </button>
     <button class="tool" id="btnSom" type="button" aria-pressed="true" aria-label="Som" title="Som ligado">
       <svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/></svg>
       <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
@@ -268,7 +300,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
     <button class="tool" id="btnTela" type="button" aria-label="Tela cheia" title="Tela cheia">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
     </button>
-    <a class="tool" href="#participantes" aria-label="Ver participantes e planilha" title="Participantes e planilha">
+    <a class="tool" href="#participantes" aria-label="Ver participantes" title="Participantes">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01"/></svg>
     </a>
   </div>
@@ -283,7 +315,54 @@ button { font: inherit; color: inherit; cursor: pointer; }
     </div>
   </div>
 
-  <section class="col-draw" aria-label="Sorteio">
+  <!-- Tela 1: carregar os dados -->
+  <section class="col-setup" id="telaDados" aria-labelledby="tituloDados">
+    <div class="setup-head">
+      <p class="pill-label">PREPARAR O SORTEIO</p>
+      <h2 class="setup-title" id="tituloDados">Carregue os dados da rifa</h2>
+    </div>
+
+    <div class="campo">
+      <h3>Planilha da rifa</h3>
+      <div class="drop" id="soltar">
+        <div class="drop-part" id="soltarVazio">
+          <p><strong>Arraste para cá o relatório .xlsx</strong> exportado pela rifa.digital, ou escolha o arquivo no computador.</p>
+          <button class="btn solid" id="btnArquivo" type="button">Escolher arquivo</button>
+        </div>
+        <div class="drop-part" id="soltarOk" hidden>
+          <p class="drop-nome" id="arquivoNome"></p>
+          <p id="arquivoResumo"></p>
+          <button class="btn" id="btnOutroArquivo" type="button">Trocar arquivo</button>
+        </div>
+        <input type="file" id="arquivo" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+      </div>
+      <p class="aviso" id="avisoDados" role="status" hidden></p>
+    </div>
+
+    <div class="campo">
+      <h3><label for="qtdPontos">Quantidade de pontos da rifa</label></h3>
+      <div class="qtd">
+        <input type="number" id="qtdPontos" inputmode="numeric" min="2" max="10000" step="1" value="200">
+        <div class="chips-qtd" id="atalhosQtd" role="group" aria-label="Quantidades comuns">
+          <button class="chip" type="button" data-qtd="50">50</button>
+          <button class="chip" type="button" data-qtd="100">100</button>
+          <button class="chip" type="button" data-qtd="200">200</button>
+          <button class="chip" type="button" data-qtd="500">500</button>
+          <button class="chip" type="button" data-qtd="1000">1000</button>
+        </div>
+      </div>
+      <p class="muted" id="faixa"></p>
+    </div>
+
+    <div class="setup-go">
+      <p class="aviso" id="avisoSessao" hidden></p>
+      <button class="btn-draw" id="btnComecar" type="button" disabled>IR PARA O SORTEIO</button>
+      <p class="muted">A planilha é lida aqui no navegador e nada fica guardado: ao fechar ou recarregar a página, os dados e os sorteios somem.</p>
+    </div>
+  </section>
+
+  <!-- Tela 2: o sorteio -->
+  <section class="col-draw" id="colSorteio" aria-label="Sorteio" hidden>
     <p class="pill-label draw-label">PONTO SORTEADO</p>
     <div class="ring" id="anel"><div class="ring-face"><span class="digits" id="numero">?</span></div></div>
     <div class="status-wrap">
@@ -294,7 +373,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
     <fieldset class="mode">
       <legend class="sr">Quais pontos concorrem</legend>
       <label><input type="radio" name="modo" id="modoVendidos" value="vendidos" checked><span>Só os vendidos</span></label>
-      <label><input type="radio" name="modo" id="modoTodos" value="todos"><span>Todos os 200</span></label>
+      <label><input type="radio" name="modo" id="modoTodos" value="todos"><span id="rotuloTodos">Todos</span></label>
     </fieldset>
     <div class="prize">
       <div class="ring"><div class="ring-face"><img data-img="premio" width="440" height="440" alt="Sanduicheira aberta com sanduíches tostados"></div></div>
@@ -302,20 +381,20 @@ button { font: inherit; color: inherit; cursor: pointer; }
     </div>
   </section>
 
-  <section class="col-board" aria-labelledby="tituloQuadro">
+  <section class="col-board" id="colQuadro" aria-labelledby="tituloQuadro" hidden>
     <div class="board-head">
       <h2 id="tituloQuadro">Quadro de pontos</h2>
       <p class="legend"><span><i></i><span id="qtdVendidos"></span></span><span><i class="free"></i><span id="qtdLivres"></span></span><span id="legSorteados" hidden><i class="out"></i><span id="qtdSorteados"></span></span></p>
     </div>
     <div class="board" id="quadro"></div>
-    <p class="readout" id="leitura">Toque em um ponto para ver de quem é.</p>
+    <p class="readout" id="leitura"></p>
   </section>
 
   <div class="church"><img data-img="logo" width="458" height="258" alt="Igreja Batista Vale de Bênção, Ministério Pr. Darckson Lira"></div>
   <p class="tab">Sua contribuição faz a diferença!</p>
 </main>
 
-<div class="details" id="participantes">
+<div class="details" id="participantes" hidden>
   <div class="details-inner">
     <section class="block" aria-labelledby="tituloPessoas">
       <div class="block-head">
@@ -330,21 +409,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
         <h2 id="tituloHistorico">Sorteios realizados</h2>
         <button class="btn" id="btnLimpar" type="button" hidden>Recomeçar sorteio</button>
       </div>
-      <p class="muted" id="historicoVazio">Nenhum sorteio ainda. Cada ponto sorteado sai da disputa e fica registrado aqui, neste navegador.</p>
+      <p class="muted" id="historicoVazio">Nenhum sorteio ainda. Cada ponto sorteado sai da disputa e fica listado aqui enquanto a página estiver aberta.</p>
       <ol class="historico" id="historico"></ol>
     </section>
 
-    <section class="block" aria-labelledby="tituloPlanilha">
-      <h2 id="tituloPlanilha">Planilha da rifa</h2>
+    <section class="block" aria-labelledby="tituloEmUso">
+      <h2 id="tituloEmUso">Dados deste sorteio</h2>
       <p id="fonte"></p>
-      <p class="muted">Vendeu mais pontos depois desse relatório? Exporte de novo na rifa.digital e carregue o arquivo .xlsx aqui. A leitura acontece no seu navegador e só usa as colunas Nome e Cotas.</p>
       <div class="row">
-        <button class="btn solid" id="btnPlanilha" type="button">Carregar planilha atualizada</button>
-        <button class="btn" id="btnRestaurar" type="button" hidden>Voltar à planilha original</button>
-        <input type="file" id="arquivo" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+        <button class="btn solid" id="btnTrocar" type="button">Trocar planilha ou quantidade</button>
       </div>
-      <p class="aviso" id="aviso" role="status" hidden></p>
       <p class="muted">Como o sorteio funciona: o ponto é escolhido pelo gerador aleatório criptográfico do navegador no instante do clique, com a mesma chance para cada ponto que concorre. A contagem na tela só revela o resultado. Ponto que já saiu não volta a concorrer até você recomeçar o sorteio.</p>
+      <p class="muted">Nada fica guardado. Ao fechar ou recarregar a página, a planilha e os sorteios somem.</p>
     </section>
   </div>
 </div>
@@ -376,46 +452,22 @@ const IMAGENS = {
 (() => {
   'use strict';
 
-  const TOTAL = 200; // a rifa tem 200 pontos, de 0 a 199
-  const CHAVE = 'sorteio-rifa-ibvb-4861349';
   const PREMIO = 'uma sanduicheira moderna de alta qualidade';
-
-  // Nome e pontos de cada contribuição do relatório da rifa.digital (telefones ficam de fora).
-  const ORIGINAL = {
-    fonte: 'relatorio-festa-do-dia-das-criancas-ibvb-santa-cecilia-4861349.xlsx',
-    ate: '06/10/2026 às 17:19',
-    importadoEm: null,
-    pessoas: [
-      { nome: 'Sergio Levy Nobre do Santos', pontos: [83, 84] },
-      { nome: 'Dayanna da Silva tavares', pontos: [44, 63] },
-      { nome: 'Francisco Wellington Freitas da Silva', pontos: [4, 17, 28, 78] },
-      { nome: 'Sandra', pontos: [5] },
-      { nome: 'José Castelo', pontos: [6, 9, 10, 40, 42, 43, 48, 60, 80, 101] },
-      { nome: 'Camila silva', pontos: [57] },
-      { nome: 'Ana Carolina', pontos: [109, 122, 123, 134] },
-      { nome: 'Alzenir Guerra', pontos: [160] },
-      { nome: 'Ana Beatriz Ferreira Oliveira Alencar', pontos: [33] },
-      { nome: 'Miliana Oliveira', pontos: [30] },
-      { nome: 'Karliane', pontos: [2, 22] },
-      { nome: 'Mary Maciel', pontos: [50, 51] },
-      { nome: 'Denise', pontos: [12] },
-      { nome: 'Tarciana Lima', pontos: [16, 18, 62] },
-      { nome: 'Livia Vasconcelos', pontos: [11, 21, 96, 152, 182, 192, 199] },
-      { nome: 'Aparecida', pontos: [19, 77, 117, 120] },
-      { nome: 'Izelda', pontos: [0, 1] },
-      { nome: 'Antônia Maria', pontos: [13, 29, 73, 86] },
-      { nome: 'Anilda', pontos: [24, 76] }
-    ]
-  };
+  const QTD_MIN = 2, QTD_MAX = 10000; // limites do seletor de quantidade de pontos
 
   const $ = (id) => document.getElementById(id);
   const el = {
+    palco: $('palco'), telaDados: $('telaDados'), colSorteio: $('colSorteio'), colQuadro: $('colQuadro'), ferramentas: $('ferramentas'), detalhes: $('participantes'),
+    soltar: $('soltar'), soltarVazio: $('soltarVazio'), soltarOk: $('soltarOk'), arquivo: $('arquivo'), btnArquivo: $('btnArquivo'), btnOutroArquivo: $('btnOutroArquivo'),
+    arquivoNome: $('arquivoNome'), arquivoResumo: $('arquivoResumo'), avisoDados: $('avisoDados'),
+    qtd: $('qtdPontos'), atalhos: [...document.querySelectorAll('#atalhosQtd .chip')], faixa: $('faixa'), avisoSessao: $('avisoSessao'), btnComecar: $('btnComecar'),
     anel: $('anel'), numero: $('numero'), status: $('status'), btn: $('btnSortear'),
-    modoVendidos: $('modoVendidos'), modoTodos: $('modoTodos'), restam: $('restam'), recomecoPalco: $('recomecoPalco'), btnRecomecarPalco: $('btnRecomecarPalco'),
+    modoVendidos: $('modoVendidos'), modoTodos: $('modoTodos'), rotuloTodos: $('rotuloTodos'),
+    restam: $('restam'), recomecoPalco: $('recomecoPalco'), btnRecomecarPalco: $('btnRecomecarPalco'),
     quadro: $('quadro'), qtdVendidos: $('qtdVendidos'), qtdLivres: $('qtdLivres'), legSorteados: $('legSorteados'), qtdSorteados: $('qtdSorteados'), leitura: $('leitura'),
     pessoas: $('pessoas'), resumoPessoas: $('resumoPessoas'),
     historico: $('historico'), historicoVazio: $('historicoVazio'), btnLimpar: $('btnLimpar'),
-    fonte: $('fonte'), btnPlanilha: $('btnPlanilha'), btnRestaurar: $('btnRestaurar'), arquivo: $('arquivo'), aviso: $('aviso'),
+    fonte: $('fonte'), btnTrocar: $('btnTrocar'), btnTrocarTopo: $('btnTrocarTopo'),
     rev: $('revelacao'), revNumero: $('revNumero'), revParabens: $('revParabens'), revNome: $('revNome'), revPremio: $('revPremio'),
     btnFechar: $('btnFechar'), btnDeNovo: $('btnDeNovo'), btnSom: $('btnSom'), btnTela: $('btnTela')
   };
@@ -425,51 +477,128 @@ const IMAGENS = {
 
   document.querySelectorAll('[data-img]').forEach((img) => { img.src = IMAGENS[img.dataset.img]; });
 
-  /* ---------- Estado ---------- */
-  const dadosValidos = (d) => !!d && Array.isArray(d.pessoas) && d.pessoas.length > 0 && d.pessoas.every((p) =>
-    p && typeof p.nome === 'string' && Array.isArray(p.pontos) && p.pontos.every((n) => Number.isInteger(n) && n >= 0 && n < TOTAL));
-
-  const guardado = (() => { try { return JSON.parse(localStorage.getItem(CHAVE)) || {}; } catch { return {}; } })();
+  /* ---------- Estado: tudo em memória. Nada é embutido na página nem guardado no navegador. ---------- */
   const estado = {
-    dados: dadosValidos(guardado.dados) ? guardado.dados : ORIGINAL,
-    modo: guardado.modo === 'todos' ? 'todos' : 'vendidos',
-    som: guardado.som !== false,
-    historico: Array.isArray(guardado.historico) ? guardado.historico.filter((h) => h && Number.isInteger(h.numero)) : [],
+    arquivo: '',      // nome da planilha carregada
+    linhas: null,     // contribuições lidas da planilha: [{ nome, numeros }]
+    erroArquivo: '',  // por que a última planilha escolhida não serviu
+    modo: 'vendidos',
+    som: true,
+    historico: [],
     sorteando: false
   };
-  function salvar() {
-    try {
-      localStorage.setItem(CHAVE, JSON.stringify({
-        dados: estado.dados === ORIGINAL ? null : estado.dados, modo: estado.modo, som: estado.som, historico: estado.historico
-      }));
-    } catch { /* sem armazenamento: a página segue funcionando, só não lembra entre recargas */ }
+  let sessao = null;          // { linhas, total } do sorteio em andamento
+  let total = 0;              // pontos da rifa neste sorteio: de 0 a total - 1
+  let pessoas = [];           // contribuições que valem neste sorteio: [{ nome, pontos }]
+  let dono = new Map();       // ponto -> nome
+  let vendidos = [];          // pontos vendidos, em ordem
+  const sorteados = new Set(); // pontos que já saíram: não concorrem de novo
+  let destaque = null;        // ponto do sorteio mais recente
+  let celulas = [];
+  const naDisputa = () => (estado.modo === 'todos' ? Array.from({ length: total }, (_, i) => i) : vendidos).filter((n) => !sorteados.has(n));
+
+  /* ---------- Tela 1: planilha e quantidade de pontos ---------- */
+  function quantidade() {
+    const n = Number(el.qtd.value);
+    return el.qtd.value.trim() !== '' && Number.isInteger(n) && n >= QTD_MIN && n <= QTD_MAX ? n : null;
+  }
+  // Separa o que a planilha traz do que cabe numa rifa de n pontos (0 a n - 1).
+  function conferir(linhas, n) {
+    const validas = [], fora = [], repetidos = [], vistos = new Set();
+    for (const l of linhas) {
+      const pontos = [];
+      for (const num of l.numeros) {
+        if (num >= n) { fora.push(num); continue; }
+        if (vistos.has(num)) { repetidos.push(num); continue; }
+        vistos.add(num); pontos.push(num);
+      }
+      if (pontos.length) validas.push({ nome: l.nome, pontos });
+    }
+    return { pessoas: validas, fora, repetidos, vendidos: vistos.size };
+  }
+  const mesmaSessao = (n) => !!sessao && sessao.linhas === estado.linhas && sessao.total === n;
+  function pintarDados() {
+    const n = quantidade(), tem = !!estado.linhas;
+    el.faixa.textContent = n ? `Os pontos vão de 0 a ${n - 1}.` : `Informe um número inteiro de ${QTD_MIN} a ${QTD_MAX}.`;
+    el.atalhos.forEach((c) => c.setAttribute('aria-pressed', String(Number(c.dataset.qtd) === n)));
+    el.soltar.classList.toggle('ok', tem);
+    el.soltarVazio.hidden = tem; el.soltarOk.hidden = !tem;
+
+    let pode = false, aviso = estado.erroArquivo, erro = !!estado.erroArquivo;
+    if (tem) {
+      el.arquivoNome.textContent = estado.arquivo;
+      if (n) {
+        const c = conferir(estado.linhas, n);
+        el.arquivoResumo.textContent = `${plural(c.pessoas.length, 'contribuição', 'contribuições')} · ${c.vendidos} de ${n} pontos vendidos`;
+        pode = c.fora.length === 0 && c.pessoas.length > 0;
+        if (!aviso && c.fora.length) {
+          const maior = Math.max(...c.fora);
+          aviso = `A planilha tem ${plural(c.fora.length, 'ponto', 'pontos')} acima de ${n - 1} (o maior é o ${maior}). Aumente a quantidade para pelo menos ${maior + 1}.`;
+          erro = true;
+        } else if (!aviso && c.repetidos.length) {
+          aviso = `${c.repetidos.length === 1 ? 'O ponto' : 'Os pontos'} ${c.repetidos.join(', ')} ${c.repetidos.length === 1 ? 'aparece' : 'aparecem'} mais de uma vez na planilha. Vale a primeira linha.`;
+        }
+      } else {
+        el.arquivoResumo.textContent = plural(estado.linhas.length, 'contribuição', 'contribuições');
+      }
+    }
+    el.avisoDados.textContent = aviso; el.avisoDados.classList.toggle('erro', erro); el.avisoDados.hidden = !aviso;
+
+    const mesma = mesmaSessao(n);
+    el.btnComecar.disabled = !pode;
+    el.btnComecar.textContent = mesma ? 'VOLTAR AO SORTEIO' : 'IR PARA O SORTEIO';
+    const perde = !!sessao && estado.historico.length > 0 && !mesma;
+    el.avisoSessao.hidden = !perde;
+    if (perde) el.avisoSessao.textContent = `Com outra planilha ou outra quantidade o sorteio recomeça do zero: ${plural(estado.historico.length, 'ponto já sorteado volta', 'pontos já sorteados voltam')} à disputa.`;
+  }
+  function mostrarTela(qual) {
+    const sorteio = qual === 'sorteio';
+    el.palco.dataset.view = qual;
+    el.telaDados.hidden = sorteio;
+    for (const parte of [el.colSorteio, el.colQuadro, el.ferramentas, el.detalhes]) parte.hidden = !sorteio;
+    if (!sorteio) pintarDados();
+    window.scrollTo(0, 0);
+  }
+  function comecar() {
+    const n = quantidade();
+    if (!n || !estado.linhas) return;
+    if (!mesmaSessao(n)) {
+      const c = conferir(estado.linhas, n);
+      if (c.fora.length || !c.pessoas.length) return;
+      sessao = { linhas: estado.linhas, total: n };
+      total = n; pessoas = c.pessoas;
+      estado.historico = []; sorteados.clear();
+      dono = new Map();
+      for (const p of pessoas) for (const num of p.pontos) dono.set(num, p.nome);
+      vendidos = [...dono.keys()].sort((a, b) => a - b);
+      el.anel.classList.remove('cravou');
+      montarQuadro(); pintar(); pintarHistorico();
+    }
+    mostrarTela('sorteio');
+  }
+  function voltarAosDados() {
+    if (!estado.sorteando) mostrarTela('dados');
   }
 
-  let dono = new Map();   // ponto -> nome
-  let vendidos = [];      // pontos vendidos, em ordem
-  const sorteados = new Set(estado.historico.map((h) => h.numero)); // pontos que já saíram: não concorrem de novo
-  let destaque = null;    // ponto do sorteio mais recente
-  const naDisputa = () => (estado.modo === 'todos' ? Array.from({ length: TOTAL }, (_, i) => i) : vendidos).filter((n) => !sorteados.has(n));
-  function indexar() {
-    dono = new Map();
-    for (const p of estado.dados.pessoas) for (const n of p.pontos) if (!dono.has(n)) dono.set(n, p.nome);
-    vendidos = [...dono.keys()].sort((a, b) => a - b);
-  }
-
-  /* ---------- Quadro, listas e textos ---------- */
-  const celulas = [];
+  /* ---------- Tela 2: quadro, listas e textos ---------- */
   function montarQuadro() {
     const frag = document.createDocumentFragment();
-    for (let n = 0; n < TOTAL; n++) {
+    celulas = [];
+    for (let n = 0; n < total; n++) {
       const c = document.createElement('span');
       c.className = 'cell'; c.textContent = n; c.dataset.n = n;
       celulas.push(c); frag.append(c);
     }
-    el.quadro.append(frag);
-    el.quadro.addEventListener('click', (e) => {
-      const c = e.target.closest('.cell');
-      if (c) mostrarDono(Number(c.dataset.n));
-    });
+    el.quadro.textContent = ''; el.quadro.append(frag);
+
+    // O quadro tem 10 colunas. Até 20 linhas ele cabe inteiro na tela; acima disso rola por dentro.
+    const linhas = Math.ceil(total / 10), digitos = String(total - 1).length;
+    const raiz = document.documentElement.style;
+    raiz.setProperty('--rows', Math.min(linhas, 20));
+    raiz.setProperty('--digits', Math.max(2, digitos));
+    raiz.setProperty('--digit-k', digitos <= 3 ? 0.43 : 0.3);
+    el.quadro.classList.toggle('longo', linhas > 20);
+    el.quadro.scrollTop = 0;
   }
   function mostrarDono(n) {
     const nome = dono.get(n);
@@ -485,7 +614,7 @@ const IMAGENS = {
       c.title = `${n} · ${nome || 'sem dono'}${saiu ? ' · já sorteado' : ''}`;
     });
     el.qtdVendidos.textContent = plural(vendidos.length, 'vendido', 'vendidos');
-    el.qtdLivres.textContent = plural(TOTAL - vendidos.length, 'livre', 'livres');
+    el.qtdLivres.textContent = plural(total - vendidos.length, 'livre', 'livres');
     el.qtdSorteados.textContent = plural(sorteados.size, 'sorteado', 'sorteados');
     el.legSorteados.hidden = sorteados.size === 0;
   }
@@ -502,11 +631,12 @@ const IMAGENS = {
   function pintar() {
     destaque = null;
     pintarCelulas(); pintarDisputa();
+    el.rotuloTodos.textContent = `Todos os ${total}`;
     el.leitura.textContent = 'Toque em um ponto para ver de quem é.';
     el.numero.textContent = '?';
     el.status.textContent = 'Quem vai ganhar?';
 
-    const ordenadas = [...estado.dados.pessoas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+    const ordenadas = [...pessoas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
     el.pessoas.textContent = '';
     for (const p of ordenadas) {
       const li = document.createElement('li'); li.className = 'pessoa';
@@ -518,13 +648,8 @@ const IMAGENS = {
       for (const n of [...p.pontos].sort((a, b) => a - b)) { const s = document.createElement('span'); s.textContent = n; chips.append(s); }
       li.append(topo, chips); el.pessoas.append(li);
     }
-    el.resumoPessoas.textContent = `${plural(estado.dados.pessoas.length, 'contribuição', 'contribuições')} · ${plural(vendidos.length, 'ponto vendido', 'pontos vendidos')} de ${TOTAL}`;
-
-    const original = estado.dados === ORIGINAL;
-    el.fonte.textContent = original
-      ? `Em uso: ${estado.dados.fonte}, com contribuições até ${estado.dados.ate}.`
-      : `Em uso: ${estado.dados.fonte}, carregada em ${dataHora(estado.dados.importadoEm)}.`;
-    el.btnRestaurar.hidden = original;
+    el.resumoPessoas.textContent = `${plural(pessoas.length, 'contribuição', 'contribuições')} · ${plural(vendidos.length, 'ponto vendido', 'pontos vendidos')} de ${total}`;
+    el.fonte.textContent = `Em uso: ${estado.arquivo}, em uma rifa de ${total} pontos (0 a ${total - 1}).`;
   }
   function pintarHistorico() {
     el.historico.textContent = '';
@@ -539,9 +664,6 @@ const IMAGENS = {
     }
     const vazio = estado.historico.length === 0;
     el.historicoVazio.hidden = !vazio; el.btnLimpar.hidden = vazio;
-  }
-  function aplicarDados(dados) {
-    estado.dados = dados; indexar(); pintar(); salvar();
   }
 
   /* ---------- Sorteio ---------- */
@@ -590,6 +712,7 @@ const IMAGENS = {
       if (i >= fila.length) {
         mostrarNumero(sorteado); saltar(null);
         destaque = sorteado; celulas[sorteado].classList.add('winner');
+        if (el.quadro.classList.contains('longo')) el.quadro.scrollTop = celulas[sorteado].offsetTop - el.quadro.clientHeight / 2;
         el.anel.classList.remove('girando'); el.anel.classList.add('cravou');
         som.crava();
         setTimeout(() => concluir(sorteado, universo.length), poucoMovimento ? 300 : 950);
@@ -608,13 +731,19 @@ const IMAGENS = {
     const nome = dono.get(numero) || null;
     estado.historico.unshift({ quando: new Date().toISOString(), numero, nome, universo });
     sorteados.add(numero);
-    salvar(); pintarHistorico();
+    pintarHistorico();
     estado.sorteando = false;
     el.modoVendidos.disabled = false; el.modoTodos.disabled = false;
     pintarCelulas(); pintarDisputa();
     el.status.textContent = nome ? `Ponto ${numero} · ${nome}` : `Ponto ${numero} · sem dono`;
     mostrarDono(numero);
     abrirRevelacao(numero, nome);
+  }
+  function recomecar() {
+    if (estado.sorteando) return;
+    estado.historico = []; sorteados.clear();
+    el.anel.classList.remove('cravou');
+    pintar(); pintarHistorico();
   }
 
   /* ---------- Revelação ---------- */
@@ -817,10 +946,10 @@ const IMAGENS = {
       if (dv.getUint32(i, true) === 0x06054b50) { fim = i; break; }
     }
     if (fim < 0) throw new Error('formato');
-    const total = dv.getUint16(fim + 10, true);
+    const entradasZip = dv.getUint16(fim + 10, true);
     let p = dv.getUint32(fim + 16, true);
     const entradas = new Map();
-    for (let k = 0; k < total && dv.getUint32(p, true) === 0x02014b50; k++) {
+    for (let k = 0; k < entradasZip && dv.getUint32(p, true) === 0x02014b50; k++) {
       const nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true);
       entradas.set(td.decode(u8.subarray(p + 46, p + 46 + nl)), {
         metodo: dv.getUint16(p + 10, true), tamanho: dv.getUint32(p + 20, true), cabecalho: dv.getUint32(p + 42, true)
@@ -856,10 +985,11 @@ const IMAGENS = {
       return o;
     });
   }
-  function interpretar(linhas, nomeArquivo) {
+  // Das linhas da planilha ficam só o nome e os números de cada contribuição. Telefone e e-mail não são lidos.
+  function extrair(linhasXlsx) {
     const chave = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
     let inicio = -1, colNome = null, colCotas = null;
-    linhas.some((l, i) => {
+    linhasXlsx.some((l, i) => {
       let a = null, b = null;
       for (const [col, v] of Object.entries(l)) {
         const k = chave(v);
@@ -870,38 +1000,28 @@ const IMAGENS = {
       return false;
     });
     if (inicio < 0) throw new Error('colunas');
-    const pessoas = [], fora = [], repetidos = [], vistos = new Set();
-    for (const l of linhas.slice(inicio + 1)) {
-      const nome = (l[colNome] || '').trim(), pontos = [];
-      for (const pedaco of (l[colCotas] || '').split(/[^0-9]+/)) {
-        if (!pedaco) continue;
-        const n = Number(pedaco);
-        if (!Number.isInteger(n) || n >= TOTAL) { fora.push(pedaco); continue; }
-        if (vistos.has(n)) { repetidos.push(n); continue; }
-        vistos.add(n); pontos.push(n);
-      }
-      if (nome && pontos.length) pessoas.push({ nome, pontos });
+    const saida = [];
+    for (const l of linhasXlsx.slice(inicio + 1)) {
+      const nome = (l[colNome] || '').trim();
+      const numeros = (l[colCotas] || '').replace(/\.0+$/, '').split(/[^0-9]+/).filter(Boolean).map(Number).filter(Number.isSafeInteger);
+      if (nome && numeros.length) saida.push({ nome, numeros });
     }
-    if (!pessoas.length) throw new Error('vazia');
-    return { dados: { fonte: nomeArquivo, importadoEm: new Date().toISOString(), pessoas }, fora, repetidos };
-  }
-  function avisar(texto, erro) {
-    el.aviso.textContent = texto; el.aviso.classList.toggle('erro', !!erro); el.aviso.hidden = false;
+    if (!saida.length) throw new Error('vazia');
+    return saida;
   }
   async function carregarPlanilha(arquivo) {
     try {
-      const { dados, fora, repetidos } = interpretar(await lerXlsx(arquivo), arquivo.name);
-      aplicarDados(dados);
-      let msg = `Planilha carregada: ${plural(dados.pessoas.length, 'contribuição', 'contribuições')} e ${plural(vendidos.length, 'ponto vendido', 'pontos vendidos')}.`;
-      if (fora.length) msg += ` Deixei de fora ${plural(fora.length, 'número', 'números')} que não vai de 0 a ${TOTAL - 1}: ${fora.join(', ')}.`;
-      if (repetidos.length) msg += ` ${repetidos.length === 1 ? 'O ponto' : 'Os pontos'} ${repetidos.join(', ')} ${repetidos.length === 1 ? 'aparece' : 'aparecem'} em mais de uma linha; vale a primeira.`;
-      avisar(msg, false);
+      estado.linhas = extrair(await lerXlsx(arquivo));
+      estado.arquivo = arquivo.name;
+      estado.erroArquivo = '';
     } catch (e) {
       const motivo = e && e.message;
-      avisar(motivo === 'colunas' ? 'Não encontrei as colunas Nome e Cotas. Use o relatório .xlsx exportado pela rifa.digital.'
-        : motivo === 'vazia' ? 'Essa planilha não tem nenhuma contribuição com pontos. Continuo usando a anterior.'
-        : 'Não consegui ler esse arquivo. Confira se é o relatório .xlsx exportado pela rifa.digital.', true);
+      estado.erroArquivo = (motivo === 'colunas' ? `Não encontrei as colunas Nome e Cotas em ${arquivo.name}. Use o relatório .xlsx exportado pela rifa.digital.`
+        : motivo === 'vazia' ? `${arquivo.name} não tem nenhuma contribuição com pontos.`
+        : `Não consegui ler ${arquivo.name}. Confira se é o relatório .xlsx exportado pela rifa.digital.`)
+        + (estado.linhas ? ` Continuo com ${estado.arquivo}.` : '');
     }
+    pintarDados();
   }
 
   /* ---------- Bandeirinhas ---------- */
@@ -923,17 +1043,44 @@ const IMAGENS = {
   }
 
   /* ---------- Ligações ---------- */
+  // Tela 1
+  for (const botao of [el.btnArquivo, el.btnOutroArquivo]) botao.addEventListener('click', () => el.arquivo.click());
+  el.arquivo.addEventListener('change', () => {
+    const arquivo = el.arquivo.files && el.arquivo.files[0];
+    el.arquivo.value = '';
+    if (arquivo) carregarPlanilha(arquivo);
+  });
+  for (const tipo of ['dragenter', 'dragover']) el.soltar.addEventListener(tipo, (e) => { e.preventDefault(); el.soltar.classList.add('sobre'); });
+  el.soltar.addEventListener('dragleave', (e) => { if (!el.soltar.contains(e.relatedTarget)) el.soltar.classList.remove('sobre'); });
+  el.soltar.addEventListener('drop', (e) => {
+    e.preventDefault(); el.soltar.classList.remove('sobre');
+    const arquivo = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (arquivo) carregarPlanilha(arquivo);
+  });
+  // soltar o arquivo fora da área não deve fazer o navegador abrir a planilha no lugar da página
+  for (const tipo of ['dragover', 'drop']) window.addEventListener(tipo, (e) => e.preventDefault());
+  el.qtd.addEventListener('input', pintarDados);
+  for (const atalho of el.atalhos) atalho.addEventListener('click', () => { el.qtd.value = atalho.dataset.qtd; pintarDados(); });
+  el.btnComecar.addEventListener('click', comecar);
+
+  // Tela 2
   el.btn.addEventListener('click', sortear);
   el.btnFechar.addEventListener('click', fecharRevelacao);
   el.btnDeNovo.addEventListener('click', () => { fecharRevelacao(); sortear(); });
+  el.btnTrocar.addEventListener('click', voltarAosDados);
+  el.btnTrocarTopo.addEventListener('click', voltarAosDados);
+  el.quadro.addEventListener('click', (e) => {
+    const c = e.target.closest('.cell');
+    if (c) mostrarDono(Number(c.dataset.n));
+  });
   for (const radio of [el.modoVendidos, el.modoTodos]) {
     radio.addEventListener('change', () => {
       if (!radio.checked) return;
-      estado.modo = radio.value; salvar(); pintarDisputa();
+      estado.modo = radio.value; pintarDisputa();
     });
   }
   el.btnSom.addEventListener('click', () => {
-    estado.som = !estado.som; salvar();
+    estado.som = !estado.som;
     el.btnSom.setAttribute('aria-pressed', String(estado.som));
     el.btnSom.title = estado.som ? 'Som ligado' : 'Som desligado';
   });
@@ -943,20 +1090,7 @@ const IMAGENS = {
       if (pedido && pedido.catch) pedido.catch(() => {});
     } catch { /* tela cheia indisponível neste navegador */ }
   });
-  el.btnPlanilha.addEventListener('click', () => el.arquivo.click());
-  el.arquivo.addEventListener('change', () => {
-    const arquivo = el.arquivo.files && el.arquivo.files[0];
-    el.arquivo.value = '';
-    if (arquivo) carregarPlanilha(arquivo);
-  });
-  el.btnRestaurar.addEventListener('click', () => { aplicarDados(ORIGINAL); avisar('Voltei à planilha original.', false); });
-  function recomecar() {
-    if (estado.sorteando) return;
-    estado.historico = []; sorteados.clear(); salvar();
-    el.anel.classList.remove('cravou');
-    pintar(); pintarHistorico();
-  }
-  // Recomeçar apaga o registro e devolve todos os pontos, então pede um segundo clique.
+  // Recomeçar apaga a lista de sorteios e devolve todos os pontos, então pede um segundo clique.
   for (const botao of [el.btnLimpar, el.btnRecomecarPalco]) {
     const rotulo = botao.textContent;
     let espera = 0;
@@ -974,16 +1108,14 @@ const IMAGENS = {
     if (e.key === 'Escape') fecharRevelacao();
   });
   window.addEventListener('resize', () => fogos.remedir());
+  // Como nada é guardado, recarregar ou fechar no meio do sorteio perderia a lista do que já saiu: o navegador pede confirmação.
+  window.addEventListener('beforeunload', (e) => {
+    if (estado.historico.length) { e.preventDefault(); e.returnValue = ''; }
+  });
 
   /* ---------- Início ---------- */
   bandeirinhas();
-  montarQuadro();
-  indexar();
-  (estado.modo === 'todos' ? el.modoTodos : el.modoVendidos).checked = true;
-  el.btnSom.setAttribute('aria-pressed', String(estado.som));
-  el.btnSom.title = estado.som ? 'Som ligado' : 'Som desligado';
-  pintar();
-  pintarHistorico();
+  mostrarTela('dados');
 })();
 </script>
 </body>
